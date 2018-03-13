@@ -200,6 +200,70 @@ class ApiConfigManagerTest(unittest.TestCase):
     self.assertEqual(fake_method, method_spec)
     self.assertEqual({'id': 'i'}, params)
 
+  def test_lookup_nested_params_with_trailing_slash(self):
+      fake_methods = [
+          ('books.list', 'books/'),
+          ('books.get', 'books/{book_id}/'),
+          ('pages.get', 'books/{book_id}/{page_number}/')
+      ]
+      methods = {}
+      for method_name, path in fake_methods:
+        method_spec = {'path': path, 'httpMethod': 'GET'}
+        methods[method_name] = method_spec
+      for name, spec in self.config_manager._get_sorted_methods(methods):
+        self.config_manager._save_rest_method(name, 'books_api', 'v1', spec)
+
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books/', 'GET')
+      self.assertEqual(resolved_method_name, 'books.list')
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books/1234/', 'GET')
+      self.assertEqual(resolved_method_name, 'books.get')
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books/1234/12/', 'GET')
+      self.assertEqual(resolved_method_name, 'pages.get')
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books', 'GET')
+      self.assertEqual(resolved_method_name, 'books.list')
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books/1234', 'GET')
+      self.assertEqual(resolved_method_name, 'books.get')
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books/1234/12', 'GET')
+      self.assertEqual(resolved_method_name, 'pages.get')
+
+  def test_lookup_nested_params_without_trailing_slash(self):
+      fake_methods = [
+          ('books.list', 'books'),
+          ('books.get', 'books/{book_id}'),
+          ('pages.get', 'books/{book_id}/{page_number}')
+      ]
+      methods = {}
+      for method_name, path in fake_methods:
+        method_spec = {'path': path, 'httpMethod': 'GET'}
+        methods[method_name] = method_spec
+      for name, spec in self.config_manager._get_sorted_methods(methods):
+        self.config_manager._save_rest_method(name, 'books_api', 'v1', spec)
+
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books', 'GET')
+      self.assertEqual(resolved_method_name, 'books.list')
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books/1234', 'GET')
+      self.assertEqual(resolved_method_name, 'books.get')
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books/1234/12', 'GET')
+      self.assertEqual(resolved_method_name, 'pages.get')
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books/', 'GET')
+      self.assertEqual(resolved_method_name, 'books.list')
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books/1234/', 'GET')
+      self.assertEqual(resolved_method_name, 'books.get')
+      resolved_method_name, _, _ = self.config_manager.lookup_rest_method(
+          'books_api/v1/books/1234/12/', 'GET')
+      self.assertEqual(resolved_method_name, 'pages.get')
+
   def test_lookup_rest_method_with_colon_in_path(self):
     fake_method = {'httpMethod': 'GET',
                    'path': 'greetings/greeting:xmas'}
